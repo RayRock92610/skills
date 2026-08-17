@@ -51,8 +51,10 @@ job = client.batches.create(
 )
 
 completed_states = {types.JobState.JOB_STATE_SUCCEEDED, types.JobState.JOB_STATE_FAILED, types.JobState.JOB_STATE_CANCELLED}
+sleep_time = 2
 while job.state not in completed_states:
-    time.sleep(30)
+    time.sleep(sleep_time)
+    sleep_time = min(sleep_time * 2, 60)
     job = client.batches.get(name=job.name)
 ```
 

@@ -21,9 +21,11 @@ tuning_job = client.tunings.tune(
     ),
 )
 
+sleep_time = 2
 running_states = {"JOB_STATE_PENDING", "JOB_STATE_RUNNING"}
 while tuning_job.state in running_states:
-    time.sleep(60)
+    time.sleep(sleep_time)
+    sleep_time = min(sleep_time * 2, 60)
     tuning_job = client.tunings.get(name=tuning_job.name)
 
 print("Tuned Model Endpoint:", tuning_job.tuned_model.endpoint)
