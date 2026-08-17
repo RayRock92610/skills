@@ -50,7 +50,7 @@ binaryAuthorization:
   evaluationMode: DISABLED
 controlPlaneEndpointsConfig:
   dnsEndpointConfig:
-    allowExternalTraffic: true          # Customer-configurable
+    allowExternalTraffic: false          # Customer-configurable
   ipEndpointsConfig:
     authorizedNetworksConfig:
       privateEndpointEnforcementEnabled: true
