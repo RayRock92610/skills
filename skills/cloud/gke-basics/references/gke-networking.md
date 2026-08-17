@@ -10,7 +10,7 @@ This reference covers networking configuration for GKE clusters. The golden path
 |---------|-------------------|---------|-------|
 | `privateClusterConfig.enablePrivateNodes` | `true` | Day-0 | Nodes have no public IPs |
 | `masterAuthorizedNetworksConfig.privateEndpointEnforcementEnabled` | `true` | Day-0 | Control plane only reachable via private endpoint or DNS |
-| `controlPlaneEndpointsConfig.dnsEndpointConfig.allowExternalTraffic` | `true` | Day-0 | Allows DNS-based access from outside VPC |
+| `controlPlaneEndpointsConfig.dnsEndpointConfig.allowExternalTraffic` | `false` | Day-0 | Disallows DNS-based access from outside VPC |
 | `networkConfig.datapathProvider` | `ADVANCED_DATAPATH` (Dataplane V2) | Day-0 | eBPF-based, built-in Network Policy |
 | `networkConfig.dnsConfig.clusterDns` | `CLOUD_DNS` | Day-0 | Managed DNS, more reliable than kube-dns |
 | `networkConfig.enableIntraNodeVisibility` | `true` | Day-1 | VPC Flow Logs for intra-node traffic |
@@ -23,7 +23,7 @@ This reference covers networking configuration for GKE clusters. The golden path
 
 The golden path creates a private cluster. Users access it via:
 
-1. **DNS endpoint (default)**: `allowExternalTraffic: true` enables access via the cluster's DNS endpoint from outside the VPC. No VPN required.
+1. **DNS endpoint (optional)**: `allowExternalTraffic: true` enables access via the cluster's DNS endpoint from outside the VPC. No VPN required.
 2. **Private endpoint**: Direct access from within the VPC or via Cloud VPN/Interconnect.
 3. **Authorized networks**: Add specific CIDRs to `masterAuthorizedNetworksConfig` for IP-based access control.
 
