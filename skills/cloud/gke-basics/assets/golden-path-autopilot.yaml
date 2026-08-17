@@ -47,7 +47,7 @@ autoscaling:
 
 # --- Security ---
 binaryAuthorization:
-  evaluationMode: DISABLED
+  evaluationMode: PROJECT_SINGLETON_POLICY_ENFORCE
 controlPlaneEndpointsConfig:
   dnsEndpointConfig:
     allowExternalTraffic: true          # Customer-configurable
