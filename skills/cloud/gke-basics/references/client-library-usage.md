@@ -51,7 +51,7 @@ within your application code.
   config, _ := clientcmd.BuildConfigFromFlags("", kubeconfig)
   clientset, _ := kubernetes.NewForConfig(config)
   pods, _ := clientset.CoreV1().Pods("").List(
-      context.TODO, metav1.ListOptions{})
+      context.TODO(), metav1.ListOptions{})
   ```
 
 ### Node.js (TypeScript)
