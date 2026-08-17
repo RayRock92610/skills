@@ -107,8 +107,10 @@ operation = client.models.generate_videos(
 )
 
 # Poll for completion
+sleep_time = 2
 while not operation.done:
-    time.sleep(20)
+    time.sleep(sleep_time)
+    sleep_time = min(sleep_time * 2, 60)
     operation = client.operations.get(operation)
 
 if operation.response:
