@@ -38,22 +38,25 @@ response = client.models.generate_content(
 For processing large datasets asynchronously.
 
 ```python
-import time
+import asyncio
 from google import genai
 from google.genai import types
 
 client = genai.Client()
 
-job = client.batches.create(
-    model="gemini-3-flash-preview",
-    src="gs://your-bucket/prompts.jsonl",
-    config=types.CreateBatchJobConfig(dest="gs://your-bucket/outputs"),
-)
+async def process_batch():
+    job = await client.aio.batches.create(
+        model="gemini-3-flash-preview",
+        src="gs://your-bucket/prompts.jsonl",
+        config=types.CreateBatchJobConfig(dest="gs://your-bucket/outputs"),
+    )
 
-completed_states = {types.JobState.JOB_STATE_SUCCEEDED, types.JobState.JOB_STATE_FAILED, types.JobState.JOB_STATE_CANCELLED}
-while job.state not in completed_states:
-    time.sleep(30)
-    job = client.batches.get(name=job.name)
+    completed_states = {types.JobState.JOB_STATE_SUCCEEDED, types.JobState.JOB_STATE_FAILED, types.JobState.JOB_STATE_CANCELLED}
+    while job.state not in completed_states:
+        await asyncio.sleep(30)
+        job = await client.aio.batches.get(name=job.name)
+
+asyncio.run(process_batch())
 ```
 
 ### Thinking (Reasoning)
