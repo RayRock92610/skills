@@ -54,7 +54,7 @@ These have golden path defaults but customers may deviate with valid justificati
 
 | Setting | Default | Why Deviate |
 |---------|---------|-------------|
-| `dnsEndpointConfig.allowExternalTraffic` | `true` | Restrict if cluster only accessed from within VPC |
+| `dnsEndpointConfig.allowExternalTraffic` | `false` | Enable only if cluster must be accessed from outside VPC |
 | `autoIpamConfig` / `createSubnetwork` | `true` / `true` | Customer has pre-existing VPC/subnets |
 | `maxPodsPerNode` | `48` | `110` for high pod-density (costs more CIDR space) |
 | `subnetwork` | auto-created | Customer brings existing subnets |
