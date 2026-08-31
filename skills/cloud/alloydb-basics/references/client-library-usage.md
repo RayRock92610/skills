@@ -23,6 +23,8 @@ operational overhead of managing the Auth Proxy as a separate binary.
 -   **Usage Example:**
 
   ```python
+  import os
+
   import sqlalchemy
   from google.cloud.alloydbconnector import Connector
 
@@ -34,9 +36,9 @@ operational overhead of managing the Auth Proxy as a separate binary.
           creator=lambda: connector.connect(
               INSTANCE_URI,
               "pg8000",
-              user="my-user",
-              password="my-password",
-              db="my-db",
+              user=os.environ.get("ALLOYDB_USER"),
+              password=os.environ.get("ALLOYDB_PASS"),
+              db=os.environ.get("ALLOYDB_DB"),
           ),
       )
 
@@ -138,6 +140,7 @@ operational overhead of managing the Auth Proxy as a separate binary.
       "database/sql"
       "fmt"
       "log"
+      "os"
 
       "cloud.google.com/go/alloydbconn/driver/pgxv5"
   )
@@ -155,10 +158,10 @@ operational overhead of managing the Auth Proxy as a separate binary.
       //   projects/PROJECT/locations/REGION/clusters/CLUSTER/instances/INSTANCE
       db, err := sql.Open("alloydb", fmt.Sprintf(
           "host=%s user=%s password=%s dbname=%s sslmode=disable",
-          "projects/my-project/locations/us-central1/clusters/my-cluster/instances/my-instance",
-          "my-user",
-          "my-password",
-          "my-db",
+          os.Getenv("ALLOYDB_INSTANCE_NAME"),
+          os.Getenv("ALLOYDB_USER"),
+          os.Getenv("ALLOYDB_PASS"),
+          os.Getenv("ALLOYDB_DB"),
       ))
       if err != nil {
           log.Fatal(err)
