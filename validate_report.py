@@ -2,6 +2,17 @@ import json
 import re
 
 def validate_report(report_data):
+    # Security: Limit input size to prevent DoS attacks (max 1MB)
+    MAX_PAYLOAD_SIZE = 1048576
+
+    if not isinstance(report_data, str):
+        print("Error: Invalid input type.")
+        return False
+
+    if len(report_data) > MAX_PAYLOAD_SIZE:
+        print("Error: Payload too large.")
+        return False
+
     try:
         data = json.loads(report_data)
         if not isinstance(data, list):
@@ -35,9 +46,11 @@ def validate_report(report_data):
         print("Validation successful!")
         return True
 
-    except json.JSONDecodeError as e:
-        print(f"JSON Decode Error: {e}")
+    except json.JSONDecodeError:
+        # Security: Do not expose raw exception details
+        print("Error: Invalid JSON format.")
         return False
-    except Exception as e:
-        print(f"Unexpected Error: {e}")
+    except Exception:
+        # Security: Do not expose raw exception details
+        print("Error: An unexpected error occurred.")
         return False
