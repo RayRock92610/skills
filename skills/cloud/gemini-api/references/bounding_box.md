@@ -56,6 +56,14 @@ To visualize the results, scale the normalized coordinates back to the original 
 
 ```python
 def scale_box(box_2d, width, height):
+    """
+    >>> scale_box([0, 0, 1000, 1000], 500, 400)
+    [0, 0, 400, 500]
+    >>> scale_box([500, 500, 500, 500], 500, 400)
+    [200, 250, 200, 250]
+    >>> scale_box([250, 100, 750, 900], 1000, 1000)
+    [250, 100, 750, 900]
+    """
     y_min, x_min, y_max, x_max = box_2d
     return [
         int(y_min / 1000 * height),
