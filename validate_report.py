@@ -31,7 +31,8 @@ def validate_report(report_data):
                     print(f"Error at index {index}: Missing required field '{field}'.")
                     return False
 
-                if not isinstance(item[field], field_type):
+                # Security: Use strict type checking to prevent bool bypassing int checks (bool is a subclass of int)
+                if type(item[field]) is not field_type:
                     print(f"Error at index {index}: Field '{field}' must be of type {field_type.__name__}.")
                     return False
 
@@ -43,7 +44,8 @@ def validate_report(report_data):
                 print(f"Error at index {index}: Confidence must be an integer between 1 and 3.")
                 return False
 
-            if not re.match(r'^https://github\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+.*$', item["deepLink"]):
+            # Security: Use \Z for end of string and avoid loose catch-alls to prevent SSRF via authority manipulation or CRLF
+            if not re.match(r'^https://github\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+[^\s@<>"\'\\]*\Z', item["deepLink"]):
                 print(f"Error at index {index}: deepLink must be a valid GitHub URL.")
                 return False
 
