@@ -26,15 +26,17 @@ certificates.
 -   **Usage Example:**
 
     ```python
+    import os
     from google.cloud.sql.connector import Connector
+
     connector = Connector()
     def getconn():
       conn = connector.connect(
-          "project:region:instance",
+          os.environ["DB_INSTANCE_NAME"], # e.g. "project:region:instance"
           "pg8000",
-          user="my-user",
-          password="my-password",
-          db="my-db"
+          user=os.environ["DB_USER"],
+          password=os.environ["DB_PASS"],
+          db=os.environ["DB_NAME"]
       )
       return conn
     ```

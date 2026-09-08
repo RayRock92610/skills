@@ -1,7 +1,14 @@
+import os
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 class TestGetConn(unittest.TestCase):
+    @patch.dict(os.environ, {
+        "DB_INSTANCE_NAME": "project:region:instance",
+        "DB_USER": "test-user",
+        "DB_PASS": "test-password",
+        "DB_NAME": "test-db"
+    })
     def test_getconn(self):
         # Setup mock connector directly without importing the real one
         mock_connector = MagicMock()
@@ -14,11 +21,11 @@ class TestGetConn(unittest.TestCase):
 
         def getconn():
             conn = connector.connect(
-                "project:region:instance",
+                os.environ["DB_INSTANCE_NAME"],
                 "pg8000",
-                user="my-user",
-                password="my-password",
-                db="my-db"
+                user=os.environ["DB_USER"],
+                password=os.environ["DB_PASS"],
+                db=os.environ["DB_NAME"]
             )
             return conn
 
@@ -29,9 +36,9 @@ class TestGetConn(unittest.TestCase):
         mock_connector.connect.assert_called_once_with(
             "project:region:instance",
             "pg8000",
-            user="my-user",
-            password="my-password",
-            db="my-db"
+            user="test-user",
+            password="test-password",
+            db="test-db"
         )
         self.assertEqual(result, mock_conn)
 
