@@ -26,6 +26,10 @@ def validate_report(report_data):
         }
 
         for index, item in enumerate(data):
+            if not isinstance(item, dict):
+                print(f"Error at index {index}: Item must be a dictionary.")
+                return False
+
             for field, field_type in required_fields.items():
                 if field not in item:
                     print(f"Error at index {index}: Missing required field '{field}'.")

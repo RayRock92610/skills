@@ -13,3 +13,8 @@
 **Vulnerability:** Hardcoded plaintext passwords found in test files and documentation examples (`password="my-password"`).
 **Learning:** Sample code and test code are frequently copy-pasted into production environments by developers. Hardcoded secrets in these areas often propagate insecure default configurations and practices to real-world applications.
 **Prevention:** Always use environment variables (`os.environ["DB_PASS"]`) or secure secret managers even in documentation and tests. Mock the environment variables during testing to ensure tests pass without needing real credentials.
+
+## 2024-05-24 - Unvalidated JSON List Items (Type Error / DoS)
+**Vulnerability:** When parsing a JSON report list, `validate_report` checked if the payload was a list but failed to ensure that individual items within the list were actually objects/dictionaries before attempting key lookups (`if field not in item`). This allowed an attacker to pass primitive types (like integers, `[1]`) within the array, causing an unhandled `TypeError` (e.g., `argument of type 'int' is not iterable`) during execution, potentially leading to 500 errors or application crashes.
+**Learning:** `json.loads` can return varied structures. Just because the outer container is a list does not mean the inner elements are dictionaries, even if your API expects objects. Always validate the type of *each element* inside a list before interacting with its properties or keys.
+**Prevention:** Explicitly check if elements in a parsed JSON array are dictionaries (e.g., `isinstance(item, dict)`) before performing dictionary-specific operations or validations.
