@@ -27,7 +27,7 @@ endpoint management to help developers build AI apps faster.
 
     ```bash
     gcloud alloydb clusters create my-cluster --region=us-central1 \
-        --password=my-password --network=my-vpc
+        --password=YOUR_SECURE_PASSWORD --network=my-vpc
     ```
 
     *Note: For production, we recommend using IAM database authentication

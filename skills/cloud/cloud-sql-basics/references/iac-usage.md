@@ -11,6 +11,11 @@ users.
 ### Cloud SQL Instance Example
 
 ```terraform
+resource "random_password" "db_password" {
+  length  = 16
+  special = true
+}
+
 resource "google_sql_database_instance" "default" {
   name             = "master-instance"
   region           = "us-central1"
@@ -32,7 +37,7 @@ resource "google_sql_database" "database" {
 resource "google_sql_user" "users" {
   name     = "me"
   instance = google_sql_database_instance.default.name
-  password = "changeme"
+  password = random_password.db_password.result
 }
 ```
 

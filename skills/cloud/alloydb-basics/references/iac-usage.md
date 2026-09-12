@@ -15,6 +15,11 @@ or via Kubernetes Config Connector (KCC).
 ```terraform
 data "google_project" "project" {}
 
+resource "random_password" "db_password" {
+  length  = 16
+  special = true
+}
+
 resource "google_compute_network" "default" {
   name = "alloydb-network"
 }
@@ -41,7 +46,7 @@ resource "google_alloydb_cluster" "default" {
   }
 
   initial_user {
-    password = "alloydb-cluster"
+    password = random_password.db_password.result
   }
 
   deletion_protection = false
