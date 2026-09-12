@@ -50,7 +50,7 @@ gcloud sql [GROUP] [COMMAND] [FLAGS]
 
   ```bash
   gcloud sql users create my-user --instance=my-instance \
-      --password=my-password
+      --password=YOUR_SECURE_PASSWORD
   ```
 
 ### Operations and Backups
