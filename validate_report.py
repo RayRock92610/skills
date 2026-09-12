@@ -40,9 +40,12 @@ def validate_report(report_data):
                     print(f"Error at index {index}: Field '{field}' must be of type {field_type.__name__}.")
                     return False
 
-                if field_type == str and len(item[field]) > 2048:
-                    print(f"Error at index {index}: Field '{field}' exceeds maximum length of 2048 characters.")
-                    return False
+                if field_type == str:
+                    max_len = 128 if field == "id" else 2048
+                    if len(item[field]) > max_len:
+                        print(f"Error at index {index}: Field '{field}' exceeds maximum length of {max_len} characters.")
+                        return False
+
 
             if item["confidence"] not in [1, 2, 3]:
                 print(f"Error at index {index}: Confidence must be an integer between 1 and 3.")
