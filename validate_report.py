@@ -30,6 +30,11 @@ def validate_report(report_data):
                 print(f"Error at index {index}: Item must be a dictionary.")
                 return False
 
+            # Security: Strict schema enforcement to prevent mass assignment/prototype pollution
+            if set(item.keys()) != set(required_fields.keys()):
+                print(f"Error at index {index}: Unexpected fields present in item.")
+                return False
+
             for field, field_type in required_fields.items():
                 if field not in item:
                     print(f"Error at index {index}: Missing required field '{field}'.")
@@ -49,6 +54,11 @@ def validate_report(report_data):
 
             if item["confidence"] not in [1, 2, 3]:
                 print(f"Error at index {index}: Confidence must be an integer between 1 and 3.")
+                return False
+
+            # Security: Prevent XSS and injection by strict allow-listing ID characters
+            if not re.match(r'^[a-zA-Z0-9_.-]+\Z', item["id"]):
+                print(f"Error at index {index}: Field 'id' contains invalid characters.")
                 return False
 
             # Security: Use \Z for end of string and avoid loose catch-alls to prevent SSRF via authority manipulation or CRLF
