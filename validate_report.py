@@ -46,6 +46,12 @@ def validate_report(report_data):
                         print(f"Error at index {index}: Field '{field}' exceeds maximum length of {max_len} characters.")
                         return False
 
+                # Security: Validate ID format to prevent XSS and injection
+                if field == "id":
+                    if not re.match(r'^[a-zA-Z0-9_-]+\Z', item[field]):
+                        print(f"Error at index {index}: Field 'id' contains invalid characters.")
+                        return False
+
 
             if item["confidence"] not in [1, 2, 3]:
                 print(f"Error at index {index}: Confidence must be an integer between 1 and 3.")

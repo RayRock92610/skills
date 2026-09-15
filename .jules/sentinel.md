@@ -28,3 +28,8 @@
 **Vulnerability:** Hardcoded plaintext passwords (e.g., `password = "changeme"`) found in Terraform documentation examples for Cloud SQL and AlloyDB.
 **Learning:** Developers frequently copy and paste Infrastructure as Code examples directly into their modules. Providing hardcoded secrets in documentation encourages deploying databases with weak, known credentials, leading to immediate compromise upon deployment.
 **Prevention:** In IaC documentation and templates, always use secret managers or dynamic password generation resources (e.g., Terraform's `random_password`) to ensure secure-by-default behavior when examples are adopted.
+
+## 2026-09-15 - Missing Input Length Limits
+**Vulnerability:** String fields like `id` inside JSON payloads did not have strict content validation, potentially allowing Cross-Site Scripting (XSS) payloads to be passed in.
+**Learning:** Even internal backend validations should strictly limit character sets for fields like `id` to prevent malicious data from entering the database and later being rendered on an unsafe frontend, following the principle of defense-in-depth.
+**Prevention:** Enforce strict character limits for string inputs (e.g. `^[a-zA-Z0-9_-]+\Z` for `id`).
