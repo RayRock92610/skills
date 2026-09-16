@@ -4,6 +4,7 @@ import re
 def validate_report(report_data):
     # Security: Limit input size to prevent DoS attacks (max 1MB)
     MAX_PAYLOAD_SIZE = 1048576
+    MAX_ITEMS = 1000
 
     if not isinstance(report_data, str):
         print("Error: Invalid input type.")
@@ -17,6 +18,11 @@ def validate_report(report_data):
         data = json.loads(report_data)
         if not isinstance(data, list):
             print("Error: Report must be a list of items.")
+            return False
+
+        # Security: Limit the number of items to prevent CPU exhaustion DoS attacks
+        if len(data) > MAX_ITEMS:
+            print("Error: Too many items in the report.")
             return False
 
         required_fields = {

@@ -33,3 +33,8 @@
 **Vulnerability:** The JSON validation logic failed to enforce a strict schema and didn't validate the characters allowed in the `id` string field. This allowed for potential XSS or other injection attacks via the `id` field and the inclusion of unexpected extra fields (mass assignment / prototype pollution risks).
 **Learning:** Validating just the types and lengths of required fields is insufficient. You must explicitly restrict the character set for string fields (especially identifiers) using strict regex allow-listing and enforce the exact expected schema structure.
 **Prevention:** Enforce strict schema boundaries by rejecting unexpected fields (e.g., `set(item.keys()) != set(required_fields.keys())`) and use strict regex patterns (e.g., `^[a-zA-Z0-9_.-]+\Z`) to restrict input to only safe characters.
+
+## 2024-05-24 - Missing Array Length Limits
+**Vulnerability:** A global payload size limit (e.g., 1MB) was in place, but there was no restriction on the number of elements within a JSON array. An attacker could craft a payload with hundreds of thousands of empty objects `[{}]`, forcing the server to loop excessively and perform expensive validation checks, leading to a CPU exhaustion Denial of Service (DoS).
+**Learning:** Limiting the total payload size is necessary but not sufficient. When processing lists or collections, algorithmic complexity vulnerabilities can still occur if the number of elements is unbounded.
+**Prevention:** Enforce strict maximum item counts (e.g., `len(data) > MAX_ITEMS`) immediately after verifying an input is an array/list, before iterating over its contents.
