@@ -31,6 +31,8 @@ def validate_report(report_data):
             "deepLink": str
         }
 
+        seen_ids = set()
+
         for index, item in enumerate(data):
             if not isinstance(item, dict):
                 print(f"Error at index {index}: Item must be a dictionary.")
@@ -72,6 +74,13 @@ def validate_report(report_data):
             if not re.match(r'^https://github\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+(?:[/?#][^\s@<>"\'\\]*)?\Z', item["deepLink"]):
                 print(f"Error at index {index}: deepLink must be a valid GitHub URL.")
                 return False
+
+            # Security: Prevent duplicate IDs to mitigate potential collision attacks or downstream overrides
+            item_id = item["id"]
+            if item_id in seen_ids:
+                print(f"Error at index {index}: Duplicate ID '{item_id}' detected.")
+                return False
+            seen_ids.add(item_id)
 
         print("Validation successful!")
         return True
