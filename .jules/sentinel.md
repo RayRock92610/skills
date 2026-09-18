@@ -38,3 +38,8 @@
 **Vulnerability:** A global payload size limit (e.g., 1MB) was in place, but there was no restriction on the number of elements within a JSON array. An attacker could craft a payload with hundreds of thousands of empty objects `[{}]`, forcing the server to loop excessively and perform expensive validation checks, leading to a CPU exhaustion Denial of Service (DoS).
 **Learning:** Limiting the total payload size is necessary but not sufficient. When processing lists or collections, algorithmic complexity vulnerabilities can still occur if the number of elements is unbounded.
 **Prevention:** Enforce strict maximum item counts (e.g., `len(data) > MAX_ITEMS`) immediately after verifying an input is an array/list, before iterating over its contents.
+
+## 2024-05-24 - Path Traversal / SSRF via '..' in URLs
+**Vulnerability:** The regex used to validate `deepLink` URLs (`r'^https://github\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+...'`) allowed `..` in path components because `.` is included in the allowed character class. This allowed an attacker to craft a payload like `https://github.com/../../etc/passwd`, causing a path traversal vulnerability that could be used for Server-Side Request Forgery (SSRF) or escaping the intended repository scope in downstream processing.
+**Learning:** Regex character classes like `[a-zA-Z0-9_.-]` allow sequence patterns like `..` unless explicitly rejected. Validating domain structures requires strict path boundary checks to prevent traversal.
+**Prevention:** Explicitly check for and reject the substring `..` in URL inputs, or use URL parsing libraries that enforce safe path resolution before allowing requests.

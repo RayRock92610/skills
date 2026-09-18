@@ -73,6 +73,11 @@ def validate_report(report_data):
                 print(f"Error at index {index}: deepLink must be a valid GitHub URL.")
                 return False
 
+            # Security: Prevent path traversal in URLs
+            if ".." in item["deepLink"]:
+                print(f"Error at index {index}: deepLink contains path traversal characters.")
+                return False
+
         print("Validation successful!")
         return True
 
