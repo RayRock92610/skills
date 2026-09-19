@@ -43,3 +43,8 @@
 **Vulnerability:** The regex used to validate `deepLink` URLs (`r'^https://github\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+...'`) allowed `..` in path components because `.` is included in the allowed character class. This allowed an attacker to craft a payload like `https://github.com/../../etc/passwd`, causing a path traversal vulnerability that could be used for Server-Side Request Forgery (SSRF) or escaping the intended repository scope in downstream processing.
 **Learning:** Regex character classes like `[a-zA-Z0-9_.-]` allow sequence patterns like `..` unless explicitly rejected. Validating domain structures requires strict path boundary checks to prevent traversal.
 **Prevention:** Explicitly check for and reject the substring `..` in URL inputs, or use URL parsing libraries that enforce safe path resolution before allowing requests.
+
+## 2026-09-19 - Path Traversal Bypass via URL Encoding
+**Vulnerability:** The validation logic checking for path traversal characters (`..`) in URLs was performed on raw, URL-encoded input strings. This allowed an attacker to bypass the check by simply URL-encoding the dots (e.g., `%2e%2e` or `%2E%2E`). Downstream systems that process and evaluate the URL would decode the string, re-enabling the path traversal exploit.
+**Learning:** Security validations (like looking for malicious substrings) must always occur on canonicalized or decoded forms of input data. If data is encoded (e.g., URL-encoded, Base64), pattern matching on the raw string is insufficient because the encoding obfuscates the malicious payload.
+**Prevention:** Always decode and canonicalize inputs (e.g., using `urllib.parse.unquote()` for URLs) *before* performing security validation checks against bad characters or patterns.

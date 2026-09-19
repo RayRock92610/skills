@@ -1,5 +1,6 @@
 import json
 import re
+import urllib.parse
 
 def validate_report(report_data):
     # Security: Limit input size to prevent DoS attacks (max 1MB)
@@ -73,8 +74,9 @@ def validate_report(report_data):
                 print(f"Error at index {index}: deepLink must be a valid GitHub URL.")
                 return False
 
-            # Security: Prevent path traversal in URLs
-            if ".." in item["deepLink"]:
+            # Security: Prevent path traversal in URLs (including URL-encoded variations)
+            decoded_url = urllib.parse.unquote(item["deepLink"])
+            if ".." in decoded_url:
                 print(f"Error at index {index}: deepLink contains path traversal characters.")
                 return False
 
