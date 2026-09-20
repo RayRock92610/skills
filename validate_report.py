@@ -74,8 +74,14 @@ def validate_report(report_data):
                 print(f"Error at index {index}: deepLink must be a valid GitHub URL.")
                 return False
 
-            # Security: Prevent path traversal in URLs (including URL-encoded variations)
-            decoded_url = urllib.parse.unquote(item["deepLink"])
+            # Security: Prevent path traversal in URLs (including multiple URL-encoded variations)
+            decoded_url = item["deepLink"]
+            while True:
+                unquoted = urllib.parse.unquote(decoded_url)
+                if unquoted == decoded_url:
+                    break
+                decoded_url = unquoted
+
             if ".." in decoded_url:
                 print(f"Error at index {index}: deepLink contains path traversal characters.")
                 return False
