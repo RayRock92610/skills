@@ -68,13 +68,8 @@ def validate_report(report_data):
                 print(f"Error at index {index}: Field 'id' contains invalid characters.")
                 return False
 
-            # Security: Use \Z for end of string and avoid loose catch-alls to prevent SSRF via authority manipulation or CRLF
-            # Security: Prevent ReDoS by ensuring path components don't overlap with repository names
-            if not re.match(r'^https://github\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+(?:[/?#][^\s@<>"\'\\]*)?\Z', item["deepLink"]):
-                print(f"Error at index {index}: deepLink must be a valid GitHub URL.")
-                return False
-
             # Security: Prevent path traversal in URLs (including multiple URL-encoded variations)
+            # Security: Always decode first to prevent validation bypass via URL encoding
             decoded_url = item["deepLink"]
             while True:
                 unquoted = urllib.parse.unquote(decoded_url)
@@ -84,6 +79,12 @@ def validate_report(report_data):
 
             if ".." in decoded_url:
                 print(f"Error at index {index}: deepLink contains path traversal characters.")
+                return False
+
+            # Security: Use \Z for end of string and avoid loose catch-alls to prevent SSRF via authority manipulation or CRLF
+            # Security: Prevent ReDoS by ensuring path components don't overlap with repository names
+            if not re.match(r'^https://github\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+(?:[/?#][^\s@<>"\'\\]*)?\Z', decoded_url):
+                print(f"Error at index {index}: deepLink must be a valid GitHub URL.")
                 return False
 
         print("Validation successful!")
