@@ -58,3 +58,8 @@
 **Vulnerability:** The regular expression used to validate `deepLink` GitHub URLs was executed against the raw, URL-encoded input strings, while downstream systems decode the URL before processing. This allowed an attacker to bypass SSRF or CRLF validation by URL-encoding restricted characters (e.g., `%40` for `@` or `%0a` for a newline).
 **Learning:** Security validations (like regular expressions enforcing allowed formats or blocking specific characters) must always occur on canonicalized or decoded forms of input data. If data is encoded, pattern matching on the raw string is insufficient because the encoding obfuscates the malicious payload.
 **Prevention:** Always iteratively decode and canonicalize inputs (e.g., using a while loop with `urllib.parse.unquote()` for URLs until the output doesn't change) *before* performing security validation checks, including regex matching.
+
+## 2024-09-25 - Command Injection Risks in Documentation Examples
+**Vulnerability:** Found hardcoded plaintext passwords in shell CLI commands (e.g., `--password=PASSWORD`, `psql "host=127.0.0.1 password=PASSWORD"`) within documentation.
+**Learning:** Examples in documentation are frequently copy-pasted into terminal sessions. Passing passwords via command line flags causes the password to be written in plaintext to the user's shell history (e.g., `.bash_history`) and temporarily exposes it to process-listing tools (e.g., `ps`).
+**Prevention:** In documentation for command-line interfaces, always recommend secure mechanisms for providing secrets, such as interactive prompts (e.g., `--prompt-for-password`), environment variables, or dedicated secret files. Avoid using CLI flags that accept secrets directly.
