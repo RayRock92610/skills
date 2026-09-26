@@ -63,3 +63,8 @@
 **Vulnerability:** Found hardcoded plaintext passwords in shell CLI commands (e.g., `--password=PASSWORD`, `psql "host=127.0.0.1 password=PASSWORD"`) within documentation.
 **Learning:** Examples in documentation are frequently copy-pasted into terminal sessions. Passing passwords via command line flags causes the password to be written in plaintext to the user's shell history (e.g., `.bash_history`) and temporarily exposes it to process-listing tools (e.g., `ps`).
 **Prevention:** In documentation for command-line interfaces, always recommend secure mechanisms for providing secrets, such as interactive prompts (e.g., `--prompt-for-password`), environment variables, or dedicated secret files. Avoid using CLI flags that accept secrets directly.
+
+## 2026-09-26 - Command Line Vulnerabilities in Documentation Examples for AlloyDB
+**Vulnerability:** Found hardcoded plaintext passwords in shell CLI commands for AlloyDB clusters creation (e.g., `--password=PASSWORD`, `--password=YOUR_SECURE_PASSWORD`) within documentation.
+**Learning:** Examples in documentation are frequently copy-pasted into terminal sessions. Passing passwords via command line flags causes the password to be written in plaintext to the user's shell history (e.g., `.bash_history`) and temporarily exposes it to process-listing tools (e.g., `ps`).
+**Prevention:** In documentation for command-line interfaces like `gcloud alloydb`, always recommend secure mechanisms for providing secrets, such as interactive prompts (e.g., `--prompt-for-password`), environment variables, or dedicated secret files. Avoid using CLI flags that accept secrets directly.
