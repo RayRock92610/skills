@@ -5,7 +5,7 @@ AlloyDB resources are managed using the `gcloud alloydb` command group.
 ## Clusters
 
 1. Create a cluster: `gcloud alloydb clusters create CLUSTER_ID --region=REGION
-   --password=PASSWORD`
+   --prompt-for-password`
 
 2. List clusters: `gcloud alloydb clusters list --region=REGION`
 
