@@ -68,3 +68,8 @@
 **Vulnerability:** Found hardcoded plaintext passwords in shell CLI commands for AlloyDB clusters creation (e.g., `--password=PASSWORD`, `--password=YOUR_SECURE_PASSWORD`) within documentation.
 **Learning:** Examples in documentation are frequently copy-pasted into terminal sessions. Passing passwords via command line flags causes the password to be written in plaintext to the user's shell history (e.g., `.bash_history`) and temporarily exposes it to process-listing tools (e.g., `ps`).
 **Prevention:** In documentation for command-line interfaces like `gcloud alloydb`, always recommend secure mechanisms for providing secrets, such as interactive prompts (e.g., `--prompt-for-password`), environment variables, or dedicated secret files. Avoid using CLI flags that accept secrets directly.
+
+## 2026-10-27 - Airflow Traceback Leakage / Logging Raw Exceptions
+**Vulnerability:** Raw external API exceptions were being printed directly into logs (e.g., `logging.error("External API request failed: %s", e)` and re-raising without `from None`). This exposed sensitive information like API credentials, authorization info, and request details.
+**Learning:** In Python, implicitly chained exceptions or logging raw exception objects serialize the full traceback and local variables into logs, which can leak secrets.
+**Prevention:** Catch external exceptions explicitly, sanitize the log message (`logging.error("External API request failed - check external error tracker")`), and suppress implicit exception chaining by using `raise ... from None`. An automated AST rule now validates this.
