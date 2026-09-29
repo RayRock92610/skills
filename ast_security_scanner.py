@@ -14,18 +14,20 @@ class SecurityVisitor(ast.NodeVisitor):
 
     def visit_Call(self, node):
         # Check for logger.* calls
-        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id == "logging":
+        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id in ("logging", "logger"):
+            if node.func.attr == "exception":
+                self.issues.append(f"Line {node.lineno}: {node.func.value.id}.exception automatically passes exc_info=True")
             # Check for exc_info=True
             for kw in node.keywords:
                 if kw.arg == "exc_info":
                     if isinstance(kw.value, ast.Constant) and kw.value.value is True:
-                        self.issues.append(f"Line {node.lineno}: logging.{node.func.attr} passes exc_info=True")
+                        self.issues.append(f"Line {node.lineno}: {node.func.value.id}.{node.func.attr} passes exc_info=True")
                     elif isinstance(kw.value, ast.Name) and kw.value.id == "True":
-                        self.issues.append(f"Line {node.lineno}: logging.{node.func.attr} passes exc_info=True")
+                        self.issues.append(f"Line {node.lineno}: {node.func.value.id}.{node.func.attr} passes exc_info=True")
             # Check for raw exception variables in args
             for arg in node.args:
                 if isinstance(arg, ast.Name) and arg.id == "e":
-                    self.issues.append(f"Line {node.lineno}: logging.{node.func.attr} passes raw exception variable 'e'")
+                    self.issues.append(f"Line {node.lineno}: {node.func.value.id}.{node.func.attr} passes raw exception variable 'e'")
 
         self.generic_visit(node)
 
