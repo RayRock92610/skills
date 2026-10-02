@@ -73,3 +73,8 @@
 **Vulnerability:** Raw external API exceptions were being printed directly into logs (e.g., `logging.error("External API request failed: %s", e)` and re-raising without `from None`). This exposed sensitive information like API credentials, authorization info, and request details.
 **Learning:** In Python, implicitly chained exceptions or logging raw exception objects serialize the full traceback and local variables into logs, which can leak secrets.
 **Prevention:** Catch external exceptions explicitly, sanitize the log message (`logging.error("External API request failed - check external error tracker")`), and suppress implicit exception chaining by using `raise ... from None`. An automated AST rule now validates this.
+
+## 2024-10-02 - AST Security Scanner Bypass via Renaming Exception Variable
+**Vulnerability:** The AST security scanner `ast_security_scanner.py` responsible for preventing raw exception leakage (like `logging.error(e)`) was only checking for the variable name `"e"`. If an engineer used a different exception variable name (e.g., `except Exception as err: logging.error(err)`), the scanner failed to detect the leakage, exposing a bypass to a security control.
+**Learning:** Hardcoded literal comparisons for variable names in static analysis tools are ineffective because developers can use arbitrary naming conventions. AST rules must dynamically track aliases and bound names from scopes (like `except` handler variable names) to accurately trace data flow.
+**Prevention:** Update `ast_security_scanner.py` to keep a stack of dynamically captured variable names from `visit_ExceptHandler`'s `node.name` field, checking against those dynamically scoped names instead of just hardcoded strings.
