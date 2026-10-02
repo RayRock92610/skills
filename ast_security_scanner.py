@@ -5,11 +5,18 @@ class SecurityVisitor(ast.NodeVisitor):
     def __init__(self):
         self.issues = []
         self.in_except = False
+        self.current_except_names = []
 
     def visit_ExceptHandler(self, node):
         old_in_except = self.in_except
         self.in_except = True
+        if node.name:
+            self.current_except_names.append(node.name)
+
         self.generic_visit(node)
+
+        if node.name:
+            self.current_except_names.pop()
         self.in_except = old_in_except
 
     def visit_Call(self, node):
@@ -26,8 +33,8 @@ class SecurityVisitor(ast.NodeVisitor):
                         self.issues.append(f"Line {node.lineno}: {node.func.value.id}.{node.func.attr} passes exc_info=True")
             # Check for raw exception variables in args
             for arg in node.args:
-                if isinstance(arg, ast.Name) and arg.id == "e":
-                    self.issues.append(f"Line {node.lineno}: {node.func.value.id}.{node.func.attr} passes raw exception variable 'e'")
+                if isinstance(arg, ast.Name) and (arg.id == "e" or arg.id in self.current_except_names):
+                    self.issues.append(f"Line {node.lineno}: {node.func.value.id}.{node.func.attr} passes raw exception variable '{arg.id}'")
 
         self.generic_visit(node)
 
