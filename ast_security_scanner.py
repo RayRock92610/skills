@@ -7,16 +7,6 @@ class SecurityVisitor(ast.NodeVisitor):
         self.in_except = False
         self.current_except_names = []
 
-    def visit_Try(self, node):
-        for handler in node.handlers:
-            prev = self.in_except
-            self.in_except = True
-            for stmt in handler.body:
-                self.visit(stmt)
-            self.in_except = prev
-        for stmt in node.body + node.orelse + node.finalbody:
-            self.visit(stmt)
-
     def visit_ExceptHandler(self, node):
         old_in_except = self.in_except
         self.in_except = True
@@ -81,6 +71,16 @@ class SecurityVisitor(ast.NodeVisitor):
                     self.issues.append(f"Line {node.lineno}: {node.func.value.id}.{node.func.attr} passes raw exception variable '{arg.id}'")
 
         self.generic_visit(node)
+
+    def visit_Try(self, node):
+        for handler in node.handlers:
+            prev = self.in_except
+            self.in_except = True
+            for stmt in handler.body:
+                self.visit(stmt)
+            self.in_except = prev
+        for stmt in node.body + node.orelse + node.finalbody:
+            self.visit(stmt)
 
     def visit_Raise(self, node):
         if self.in_except:
