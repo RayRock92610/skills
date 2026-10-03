@@ -1,6 +1,16 @@
 import json
 import re
 import urllib.parse
+from urllib.parse import urlsplit
+
+def check_depth(obj, depth=0, max_depth=10):
+    if depth > max_depth:
+        return False
+    if isinstance(obj, dict):
+        return all(check_depth(v, depth + 1, max_depth) for v in obj.values())
+    elif isinstance(obj, list):
+        return all(check_depth(v, depth + 1, max_depth) for v in obj)
+    return True
 
 def validate_report(report_data):
     # Security: Limit input size to prevent DoS attacks (max 1MB)
@@ -17,6 +27,12 @@ def validate_report(report_data):
 
     try:
         data = json.loads(report_data)
+
+        # Security: Prevent JSON recursion depth attacks (e.g. nested lists/dicts bomb)
+        if not check_depth(data):
+            print("Error: JSON payload is too deeply nested.")
+            return False
+
         if not isinstance(data, list):
             print("Error: Report must be a list of items.")
             return False
@@ -77,14 +93,38 @@ def validate_report(report_data):
                     break
                 decoded_url = unquoted
 
+            # 1. Reject control characters, carriage returns, and null bytes upfront
+            if any(ord(c) < 32 or ord(c) == 127 for c in decoded_url):
+                print(f"Error at index {index}: deepLink contains control characters.")
+                return False
+
             if ".." in decoded_url:
                 print(f"Error at index {index}: deepLink contains path traversal characters.")
                 return False
 
-            # Security: Use \Z for end of string and avoid loose catch-alls to prevent SSRF via authority manipulation or CRLF
-            # Security: Prevent ReDoS by ensuring path components don't overlap with repository names
-            if not re.match(r'^https://github\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+(?:[/?#][^\s@<>"\'\\]*)?\Z', decoded_url):
-                print(f"Error at index {index}: deepLink must be a valid GitHub URL.")
+            try:
+                parsed = urlsplit(decoded_url)
+            except ValueError:
+                print(f"Error at index {index}: deepLink could not be parsed.")
+                return False
+
+            ALLOWED_SCHEMES = {"https"}
+            ALLOWED_DOMAINS = {"github.com"}
+
+            # 2. Strict scheme allowlisting (blocks file://, javascript:, data:, gopher://)
+            if parsed.scheme.lower() not in ALLOWED_SCHEMES:
+                print(f"Error at index {index}: deepLink scheme is not allowed.")
+                return False
+
+            # 3. Prevent userinfo injection (e.g., https://legit.com@attacker.com)
+            if parsed.username or parsed.password:
+                print(f"Error at index {index}: deepLink contains embedded credentials.")
+                return False
+
+            # 4. Host validation: prevent domain confusion and trailing dot bypasses
+            hostname = (parsed.hostname or "").lower().rstrip(".")
+            if not hostname or hostname not in ALLOWED_DOMAINS:
+                print(f"Error at index {index}: deepLink domain is not allowed.")
                 return False
 
         print("Validation successful!")
