@@ -39,18 +39,18 @@ class SecurityVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_Raise(self, node: ast.Raise) -> None:
-        if self.in_except:
-            # Bare raise: `raise` inside except block safely bubbles up existing error
+        if getattr(self, "in_except", False):
+            # Bare raise inside except block: safely bubble up existing error
             if node.exc is None:
                 self.generic_visit(node)
                 return
 
             # Explicit traceback suppression requires `from None`
-            # In Python 3.8+, `from None` evaluates as ast.Constant(value=None)
+            cause = getattr(node, "cause", None)
             is_suppressed = (
-                node.cause is not None
-                and isinstance(node.cause, ast.Constant)
-                and node.cause.value is None
+                cause is not None
+                and isinstance(cause, ast.Constant)
+                and cause.value is None
             )
 
             if not is_suppressed:
