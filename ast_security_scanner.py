@@ -5,14 +5,55 @@ class SecurityVisitor(ast.NodeVisitor):
     def __init__(self):
         self.issues = []
         self.in_except = False
+        self.current_except_names = []
 
     def visit_ExceptHandler(self, node):
         old_in_except = self.in_except
         self.in_except = True
+        if node.name:
+            self.current_except_names.append(node.name)
+
         self.generic_visit(node)
+
+        if node.name:
+            self.current_except_names.pop()
         self.in_except = old_in_except
 
+
     def visit_Call(self, node):
+        # 1. SQL Injection / Dynamic Execution Checks
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "execute":
+            if node.args:
+                arg0 = node.args[0]
+                # Check for f-strings
+                if isinstance(arg0, ast.JoinedStr):
+                    self.issues.append(f"Line {node.lineno}: Dynamic SQL execution via f-string detected (possible SQL injection)")
+                # Check for string formatting via % operator or .format()
+                # Not doing full flow analysis, but simple binops and method calls
+
+        # 2. Insecure Deserialization Checks
+        if isinstance(node.func, ast.Attribute):
+            mod_name = ""
+            if isinstance(node.func.value, ast.Name):
+                mod_name = node.func.value.id
+            if mod_name == "pickle" and node.func.attr == "loads":
+                self.issues.append(f"Line {node.lineno}: Insecure deserialization via pickle.loads()")
+            elif mod_name == "marshal" and node.func.attr == "loads":
+                self.issues.append(f"Line {node.lineno}: Insecure deserialization via marshal.loads()")
+            elif mod_name == "shelve" and node.func.attr == "open":
+                self.issues.append(f"Line {node.lineno}: Insecure deserialization via shelve.open()")
+
+        # 3. Direct traceback exposure
+        if isinstance(node.func, ast.Attribute):
+            mod_name = ""
+            if isinstance(node.func.value, ast.Name):
+                mod_name = node.func.value.id
+            if mod_name == "sys" and node.func.attr == "exc_info":
+                self.issues.append(f"Line {node.lineno}: Direct sys.exc_info() traceback exposure")
+            elif mod_name == "traceback" and node.func.attr == "format_exc":
+                self.issues.append(f"Line {node.lineno}: Direct traceback.format_exc() exposure")
+
+        # Original logging checks
         # Check for logger.* calls
         if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id in ("logging", "logger"):
             if node.func.attr == "exception":
@@ -26,8 +67,8 @@ class SecurityVisitor(ast.NodeVisitor):
                         self.issues.append(f"Line {node.lineno}: {node.func.value.id}.{node.func.attr} passes exc_info=True")
             # Check for raw exception variables in args
             for arg in node.args:
-                if isinstance(arg, ast.Name) and arg.id == "e":
-                    self.issues.append(f"Line {node.lineno}: {node.func.value.id}.{node.func.attr} passes raw exception variable 'e'")
+                if isinstance(arg, ast.Name) and (arg.id == "e" or arg.id in self.current_except_names):
+                    self.issues.append(f"Line {node.lineno}: {node.func.value.id}.{node.func.attr} passes raw exception variable '{arg.id}'")
 
         self.generic_visit(node)
 
@@ -58,7 +99,15 @@ def scan_directory(dirpath):
 if __name__ == "__main__":
     import sys
     target = sys.argv[1] if len(sys.argv) > 1 else "."
-    issues = scan_directory(target)
+
+    issues = {}
+    if os.path.isfile(target):
+        file_issues = scan_file(target)
+        if file_issues:
+            issues[target] = file_issues
+    else:
+        issues = scan_directory(target)
+
     if issues:
         for path, issue_list in issues.items():
             for issue in issue_list:
