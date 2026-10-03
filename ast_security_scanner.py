@@ -7,6 +7,16 @@ class SecurityVisitor(ast.NodeVisitor):
         self.in_except = False
         self.current_except_names = []
 
+    def visit_Try(self, node):
+        for handler in node.handlers:
+            prev = self.in_except
+            self.in_except = True
+            for stmt in handler.body:
+                self.visit(stmt)
+            self.in_except = prev
+        for stmt in node.body + node.orelse + node.finalbody:
+            self.visit(stmt)
+
     def visit_ExceptHandler(self, node):
         old_in_except = self.in_except
         self.in_except = True
@@ -74,8 +84,10 @@ class SecurityVisitor(ast.NodeVisitor):
 
     def visit_Raise(self, node):
         if self.in_except:
-            if getattr(node, 'cause', None) is None:
-                self.issues.append(f"Line {node.lineno}: raise inside except without from None")
+            if node.exc is not None:
+                cause = getattr(node, 'cause', None)
+                if cause is None or not (isinstance(cause, ast.Constant) and cause.value is None):
+                    self.issues.append(f"Line {node.lineno}: raise inside except without from None")
         self.generic_visit(node)
 
 def scan_file(filepath):
