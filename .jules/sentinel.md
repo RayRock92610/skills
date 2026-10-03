@@ -58,3 +58,13 @@
   - `raise CustomError(...) from e`: Flagged; leaks internal tracebacks across boundaries.
   - `raise CustomError(...)`: Flagged; unsuppressed exception creation.
 - **Task ID**: 15748934047169564082
+
+### AST Exception Chaining & Traceback Leakage Enforcement
+- **Vulnerability**: `ast_security_scanner.py` failed to detect chained traceback leaks (`raise ... from e`) and falsely flagged legitimate bare `raise` statements.
+- **Root Cause**: Missing check for `node.exc is None` penalized standard error re-raising; node cause evaluation did not validate `isinstance(node.cause, ast.Constant) and node.cause.value is None`.
+- **Enforced Policy**:
+  - `raise` (bare): Allowed for bubbling current context.
+  - `raise CustomError(...) from None`: Allowed; tracebacks explicitly suppressed.
+  - `raise CustomError(...) from e`: Flagged; leaks internal tracebacks across boundaries.
+  - `raise CustomError(...)`: Flagged; unsuppressed exception creation.
+- **Task ID**: 15748934047169564082
