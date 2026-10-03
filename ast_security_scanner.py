@@ -39,8 +39,9 @@ class SecurityVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_Raise(self, node):
-        if self.in_except:
-            if getattr(node, 'cause', None) is None:
+        if self.in_except and node.exc is not None:
+            is_from_none = isinstance(node.cause, ast.Constant) and node.cause.value is None
+            if not is_from_none:
                 self.issues.append(f"Line {node.lineno}: raise inside except without from None")
         self.generic_visit(node)
 
