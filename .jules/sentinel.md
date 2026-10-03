@@ -83,3 +83,8 @@
 **Vulnerability:** The AST security scanner previously flagged valid re-raising bare `raise` statements inside `except` blocks as security violations, while failing to enforce `from None` suppression when explicit exception chaining (`raise ... from e`) was used.
 **Learning:** In Python 3.8+, AST represents `from None` explicitly as `node.cause` being an `ast.Constant` node with a value of `None`. Bare `raise` statements evaluate to `node.exc is None` and re-raise the active exception without creating or leaking new exception context tracebacks.
 **Prevention:** In AST security visitors, ignore bare `raise` statements where `node.exc is None`, and explicitly check for `isinstance(node.cause, ast.Constant) and node.cause.value is None` to accurately enforce `from None` traceback suppression on raised exception instances.
+
+## 2024-10-24 - URL Decoding Denial of Service (DoS) via Algorithmic Complexity
+**Vulnerability:** The application mitigated path traversal and regex bypasses by canonicalizing URLs with an unbounded `while` loop calling `urllib.parse.unquote()`. This introduced a Denial of Service (DoS) vulnerability, as an attacker could supply an excessively double-encoded string (e.g., repeating `%25` hundreds of times), causing O(N^2) CPU exhaustion and bringing down the server.
+**Learning:** Security mechanisms designed to prevent evasion (like deep decoding) can inadvertently create algorithmic complexity vulnerabilities if they do not bound their work. Loop mechanisms operating on user-supplied input must have strict limits.
+**Prevention:** Always enforce a strict maximum iteration depth (e.g., 5 iterations) when iteratively decoding user input. If canonicalization does not complete within this safe threshold, reject the input securely.

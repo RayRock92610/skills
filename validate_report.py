@@ -71,11 +71,16 @@ def validate_report(report_data):
             # Security: Prevent path traversal in URLs (including multiple URL-encoded variations)
             # Security: Always decode first to prevent validation bypass via URL encoding
             decoded_url = item["deepLink"]
-            while True:
+            decode_count = 0
+            while decode_count < 5:
                 unquoted = urllib.parse.unquote(decoded_url)
                 if unquoted == decoded_url:
                     break
                 decoded_url = unquoted
+                decode_count += 1
+            else:
+                print(f"Error at index {index}: deepLink contains excessive URL encoding.")
+                return False
 
             if ".." in decoded_url:
                 print(f"Error at index {index}: deepLink contains path traversal characters.")
