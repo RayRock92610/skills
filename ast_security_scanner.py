@@ -19,7 +19,6 @@ class SecurityVisitor(ast.NodeVisitor):
             self.current_except_names.pop()
         self.in_except = old_in_except
 
-
     def visit_Call(self, node):
         # 1. SQL Injection / Dynamic Execution Checks
         if isinstance(node.func, ast.Attribute) and node.func.attr == "execute":
@@ -54,7 +53,6 @@ class SecurityVisitor(ast.NodeVisitor):
                 elif mod_name == "traceback" and node.func.attr == "format_exc":
                     self.issues.append(f"Line {node.lineno}: Direct traceback.format_exc() exposure")
 
-        # Original logging checks
         # Check for logger.* calls
         if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id in ("logging", "logger"):
             if node.func.attr == "exception":
@@ -73,12 +71,25 @@ class SecurityVisitor(ast.NodeVisitor):
 
         self.generic_visit(node)
 
-    def visit_Raise(self, node):
-        if self.in_except:
-            if node.exc is not None:
-                cause = getattr(node, 'cause', None)
-                if cause is None or not (isinstance(cause, ast.Constant) and cause.value is None):
-                    self.issues.append(f"Line {node.lineno}: raise inside except without from None")
+    def visit_Raise(self, node: ast.Raise) -> None:
+        # Bare raise: `raise` inside except block safely bubbles up existing error
+        if node.exc is None:
+            self.generic_visit(node)
+            return
+
+        # Explicit traceback suppression requires `from None`
+        # In Python 3.8+, `from None` evaluates as ast.Constant(value=None)
+        is_suppressed = (
+            node.cause is not None
+            and isinstance(node.cause, ast.Constant)
+            and node.cause.value is None
+        )
+
+        if not is_suppressed:
+            self.issues.append(
+                f"Line {node.lineno}: Unsuppressed exception raise: must explicitly chain 'from None' to prevent traceback leakage."
+            )
+
         self.generic_visit(node)
 
 def scan_file(filepath):
