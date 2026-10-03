@@ -48,10 +48,11 @@ class SecurityVisitor(ast.NodeVisitor):
             mod_name = ""
             if isinstance(node.func.value, ast.Name):
                 mod_name = node.func.value.id
-            if mod_name == "sys" and node.func.attr == "exc_info":
-                self.issues.append(f"Line {node.lineno}: Direct sys.exc_info() traceback exposure")
-            elif mod_name == "traceback" and node.func.attr == "format_exc":
-                self.issues.append(f"Line {node.lineno}: Direct traceback.format_exc() exposure")
+            if not self.in_except:
+                if mod_name == "sys" and node.func.attr == "exc_info":
+                    self.issues.append(f"Line {node.lineno}: Direct sys.exc_info() traceback exposure")
+                elif mod_name == "traceback" and node.func.attr == "format_exc":
+                    self.issues.append(f"Line {node.lineno}: Direct traceback.format_exc() exposure")
 
         # Original logging checks
         # Check for logger.* calls
@@ -71,16 +72,6 @@ class SecurityVisitor(ast.NodeVisitor):
                     self.issues.append(f"Line {node.lineno}: {node.func.value.id}.{node.func.attr} passes raw exception variable '{arg.id}'")
 
         self.generic_visit(node)
-
-    def visit_Try(self, node):
-        for handler in node.handlers:
-            prev = self.in_except
-            self.in_except = True
-            for stmt in handler.body:
-                self.visit(stmt)
-            self.in_except = prev
-        for stmt in node.body + node.orelse + node.finalbody:
-            self.visit(stmt)
 
     def visit_Raise(self, node):
         if self.in_except:
