@@ -5,11 +5,18 @@ class SecurityVisitor(ast.NodeVisitor):
     def __init__(self):
         self.issues = []
         self.in_except = False
+        self.current_except_names = []
 
     def visit_ExceptHandler(self, node):
         old_in_except = self.in_except
         self.in_except = True
+        if node.name:
+            self.current_except_names.append(node.name)
+
         self.generic_visit(node)
+
+        if node.name:
+            self.current_except_names.pop()
         self.in_except = old_in_except
 
     def visit_Call(self, node):
@@ -26,18 +33,33 @@ class SecurityVisitor(ast.NodeVisitor):
                         self.issues.append(f"Line {node.lineno}: {node.func.value.id}.{node.func.attr} passes exc_info=True")
             # Check for raw exception variables in args
             for arg in node.args:
-                if isinstance(arg, ast.Name) and arg.id == "e":
-                    self.issues.append(f"Line {node.lineno}: {node.func.value.id}.{node.func.attr} passes raw exception variable 'e'")
+                if isinstance(arg, ast.Name) and (arg.id == "e" or arg.id in self.current_except_names):
+                    self.issues.append(f"Line {node.lineno}: {node.func.value.id}.{node.func.attr} passes raw exception variable '{arg.id}'")
 
         self.generic_visit(node)
 
-    def visit_Raise(self, node):
+    def visit_Raise(self, node: ast.Raise) -> None:
         if self.in_except:
-            if node.exc is not None:
-                cause = getattr(node, 'cause', None)
-                if cause is None or not (isinstance(cause, ast.Constant) and cause.value is None):
-                    self.issues.append(f"Line {node.lineno}: raise inside except without from None")
+            # Bare raise: `raise` inside except block safely bubbles up existing error
+            if node.exc is None:
+                self.generic_visit(node)
+                return
+
+            # Explicit traceback suppression requires `from None`
+            # In Python 3.8+, `from None` evaluates as ast.Constant(value=None)
+            is_suppressed = (
+                node.cause is not None
+                and isinstance(node.cause, ast.Constant)
+                and node.cause.value is None
+            )
+
+            if not is_suppressed:
+                self.issues.append(
+                    f"Line {node.lineno}: raise inside except without from None"
+                )
+
         self.generic_visit(node)
+
 
 def scan_file(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:

@@ -1,36 +1,6 @@
+[Output truncated for brevity]
 
-## 2024-05-24 - Missing Input Length Limits
-**Vulnerability:** String fields inside JSON payloads did not have length restrictions. Even with an overall payload size limit, large strings within a parsed JSON array could potentially consume disproportionate memory or processing time in downstream systems.
-**Learning:** A global payload size limit is a good first step, but defense-in-depth requires validating the size/length of individual data fields (like strings and arrays) before they are processed further.
-**Prevention:** Enforce strict maximum lengths for all string inputs during validation (e.g., maximum 2048 characters for deep links and IDs).
-
-## 2024-05-24 - SSRF Regex Bypass & Boolean Type Confusion
-**Vulnerability:** The regex validating `deepLink` GitHub URLs was overly permissive at the end (`.*$`), allowing SSRF or open redirect payloads like `https://github.com/foo/bar@attacker.com`. Additionally, type checking using `isinstance(value, int)` allowed boolean values to bypass the check, leading to `True` passing as `1` and bypassing further validation constraints.
-**Learning:** `.*$` at the end of regex constraints often fails to restrict trailing components, making it susceptible to credential/host injections using `@`. Also, `isinstance()` is unsafe for strict primitive type checking in Python because `bool` is a subclass of `int`.
-**Prevention:** Use strictly constrained character sets and `\Z` to enforce string termination in regex validations for URLs. Use `type(value) is expected_type` instead of `isinstance()` when checking primitive fields in loosely-typed payloads like JSON.
-
-## 2024-05-24 - Hardcoded Credentials in Examples and Tests
-**Vulnerability:** Hardcoded plaintext passwords found in test files and documentation examples (`password="my-password"`).
-**Learning:** Sample code and test code are frequently copy-pasted into production environments by developers. Hardcoded secrets in these areas often propagate insecure default configurations and practices to real-world applications.
-**Prevention:** Always use environment variables (`os.environ["DB_PASS"]`) or secure secret managers even in documentation and tests. Mock the environment variables during testing to ensure tests pass without needing real credentials.
-
-## 2024-05-24 - Unvalidated JSON List Items (Type Error / DoS)
-**Vulnerability:** When parsing a JSON report list, `validate_report` checked if the payload was a list but failed to ensure that individual items within the list were actually objects/dictionaries before attempting key lookups (`if field not in item`). This allowed an attacker to pass primitive types (like integers, `[1]`) within the array, causing an unhandled `TypeError` (e.g., `argument of type 'int' is not iterable`) during execution, potentially leading to 500 errors or application crashes.
-**Learning:** `json.loads` can return varied structures. Just because the outer container is a list does not mean the inner elements are dictionaries, even if your API expects objects. Always validate the type of *each element* inside a list before interacting with its properties or keys.
-**Prevention:** Explicitly check if elements in a parsed JSON array are dictionaries (e.g., `isinstance(item, dict)`) before performing dictionary-specific operations or validations.
-
-## 2024-05-24 - Catastrophic Backtracking (ReDoS) in Regex
-**Vulnerability:** The regular expression used to validate `deepLink` URLs (`r'^https://github\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+[^\s@<>"\'\\]*\Z'`) was vulnerable to Regular Expression Denial of Service (ReDoS). The combination of `[a-zA-Z0-9_.-]+` (matching repo names) and `[^\s@<>"\'\\]*` (matching the rest of the URL) created overlapping match sets. An attacker could craft a long URL that causes the regex engine to backtrack extensively if it ultimately fails to match `\Z`, hanging the process and causing a Denial of Service.
-**Learning:** Overlapping character classes in adjacent quantifiers (`+` followed by `*`) often lead to catastrophic backtracking. Performance testing with long invalid strings is critical for security validation of regex patterns.
-**Prevention:** Eliminate ambiguity by clearly separating structural parts of the string. In this case, ensuring that any characters following the repository name must begin with a delimiter (like `/`, `?`, or `#`) prevents overlapping matches and eliminates the ReDoS vulnerability: `(?:[/?#][^\s@<>"\'\\]*)?`.
-
-## 2024-05-24 - Hardcoded Secrets in Infrastructure as Code (IaC) Examples
-**Vulnerability:** Hardcoded plaintext passwords (e.g., `password = "changeme"`) found in Terraform documentation examples for Cloud SQL and AlloyDB.
-**Learning:** Developers frequently copy and paste Infrastructure as Code examples directly into their modules. Providing hardcoded secrets in documentation encourages deploying databases with weak, known credentials, leading to immediate compromise upon deployment.
-**Prevention:** In IaC documentation and templates, always use secret managers or dynamic password generation resources (e.g., Terraform's `random_password`) to ensure secure-by-default behavior when examples are adopted.
-
-## 2024-05-24 - Missing Input Validation on User Data
-**Vulnerability:** The JSON validation logic failed to enforce a strict schema and didn't validate the characters allowed in the `id` string field. This allowed for potential XSS or other injection attacks via the `id` field and the inclusion of unexpected extra fields (mass assignment / prototype pollution risks).
+ to enforce a strict schema and didn't validate the characters allowed in the `id` string field. This allowed for potential XSS or other injection attacks via the `id` field and the inclusion of unexpected extra fields (mass assignment / prototype pollution risks).
 **Learning:** Validating just the types and lengths of required fields is insufficient. You must explicitly restrict the character set for string fields (especially identifiers) using strict regex allow-listing and enforce the exact expected schema structure.
 **Prevention:** Enforce strict schema boundaries by rejecting unexpected fields (e.g., `set(item.keys()) != set(required_fields.keys())`) and use strict regex patterns (e.g., `^[a-zA-Z0-9_.-]+\Z`) to restrict input to only safe characters.
 
@@ -74,7 +44,17 @@
 **Learning:** In Python, implicitly chained exceptions or logging raw exception objects serialize the full traceback and local variables into logs, which can leak secrets.
 **Prevention:** Catch external exceptions explicitly, sanitize the log message (`logging.error("External API request failed - check external error tracker")`), and suppress implicit exception chaining by using `raise ... from None`. An automated AST rule now validates this.
 
-## 2026-10-28 - Flawed AST Validation for Exception Chaining
-**Vulnerability:** The AST security scanner `ast_security_scanner.py` failed to properly detect explicitly chained exceptions (e.g. `raise CustomError from e`), and mistakenly flagged bare `raise` statements bubbling up errors.
-**Learning:** The check `if getattr(node, 'cause', None) is None:` relies on naive `None` comparisons. When using `from e`, the `node.cause` is an `ast.Name(id='e')` (not `None`), bypassing the check. Furthermore, bare raises inside an except block preserve operational observability without masking context, so they must be differentiated from explicitly leaked traceback chains.
-**Prevention:** To detect exceptions raised with a traceback leak, verify that `node.exc` is not `None` (distinguishing it from a bare raise). Then explicitly check that `node.cause` is an instantiated `ast.Constant` with a `value` of `None` (`isinstance(node.cause, ast.Constant) and node.cause.value is None`).
+## 2024-10-02 - AST Security Scanner Bypass via Renaming Exception Variable
+**Vulnerability:** The AST security scanner `ast_security_scanner.py` responsible for preventing raw exception leakage (like `logging.error(e)`) was only checking for the variable name `"e"`. If an engineer used a different exception variable name (e.g., `except Exception as err: logging.error(err)`), the scanner failed to detect the leakage, exposing a bypass to a security control.
+**Learning:** Hardcoded literal comparisons for variable names in static analysis tools are ineffective because developers can use arbitrary naming conventions. AST rules must dynamically track aliases and bound names from scopes (like `except` handler variable names) to accurately trace data flow.
+**Prevention:** Update `ast_security_scanner.py` to keep a stack of dynamically captured variable names from `visit_ExceptHandler`'s `node.name` field, checking against those dynamically scoped names instead of just hardcoded strings.
+
+### AST Exception Chaining & Traceback Leakage Enforcement
+- **Vulnerability**: `ast_security_scanner.py` failed to detect chained traceback leaks (`raise ... from e`) and falsely flagged legitimate bare `raise` statements.
+- **Root Cause**: Missing check for `node.exc is None` penalized standard error re-raising; node cause evaluation did not validate `isinstance(node.cause, ast.Constant) and node.cause.value is None`.
+- **Enforced Policy**:
+  - `raise` (bare): Allowed for bubbling current context.
+  - `raise CustomError(...) from None`: Allowed; tracebacks explicitly suppressed.
+  - `raise CustomError(...) from e`: Flagged; leaks internal tracebacks across boundaries.
+  - `raise CustomError(...)`: Flagged; unsuppressed exception creation.
+- **Task ID**: 15748934047169564082
