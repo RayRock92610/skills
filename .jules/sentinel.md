@@ -73,3 +73,8 @@
 **Vulnerability:** Raw external API exceptions were being printed directly into logs (e.g., `logging.error("External API request failed: %s", e)` and re-raising without `from None`). This exposed sensitive information like API credentials, authorization info, and request details.
 **Learning:** In Python, implicitly chained exceptions or logging raw exception objects serialize the full traceback and local variables into logs, which can leak secrets.
 **Prevention:** Catch external exceptions explicitly, sanitize the log message (`logging.error("External API request failed - check external error tracker")`), and suppress implicit exception chaining by using `raise ... from None`. An automated AST rule now validates this.
+
+## 2026-10-28 - Flawed AST Validation for Exception Chaining
+**Vulnerability:** The AST security scanner `ast_security_scanner.py` failed to properly detect explicitly chained exceptions (e.g. `raise CustomError from e`), and mistakenly flagged bare `raise` statements bubbling up errors.
+**Learning:** The check `if getattr(node, 'cause', None) is None:` relies on naive `None` comparisons. When using `from e`, the `node.cause` is an `ast.Name(id='e')` (not `None`), bypassing the check. Furthermore, bare raises inside an except block preserve operational observability without masking context, so they must be differentiated from explicitly leaked traceback chains.
+**Prevention:** To detect exceptions raised with a traceback leak, verify that `node.exc` is not `None` (distinguishing it from a bare raise). Then explicitly check that `node.cause` is an instantiated `ast.Constant` with a `value` of `None` (`isinstance(node.cause, ast.Constant) and node.cause.value is None`).

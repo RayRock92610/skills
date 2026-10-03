@@ -33,8 +33,10 @@ class SecurityVisitor(ast.NodeVisitor):
 
     def visit_Raise(self, node):
         if self.in_except:
-            if getattr(node, 'cause', None) is None:
-                self.issues.append(f"Line {node.lineno}: raise inside except without from None")
+            if node.exc is not None:
+                cause = getattr(node, 'cause', None)
+                if cause is None or not (isinstance(cause, ast.Constant) and cause.value is None):
+                    self.issues.append(f"Line {node.lineno}: raise inside except without from None")
         self.generic_visit(node)
 
 def scan_file(filepath):
