@@ -1,6 +1,7 @@
 import json
 import re
 import urllib.parse
+import logging
 
 def validate_report(report_data):
     # Security: Limit input size to prevent DoS attacks (max 1MB)
@@ -70,12 +71,19 @@ def validate_report(report_data):
 
             # Security: Prevent path traversal in URLs (including multiple URL-encoded variations)
             # Security: Always decode first to prevent validation bypass via URL encoding
+            # Security: Limit decoding iterations to prevent DoS via excessive double-encoding
             decoded_url = item["deepLink"]
-            while True:
+            iterations = 0
+            while iterations < 5:
                 unquoted = urllib.parse.unquote(decoded_url)
                 if unquoted == decoded_url:
                     break
                 decoded_url = unquoted
+                iterations += 1
+            else:
+                # Security: Fail securely if decoding limit is reached to prevent obfuscation bypass
+                print(f"Error at index {index}: deepLink exceeds maximum decoding iterations.")
+                return False
 
             if ".." in decoded_url:
                 print(f"Error at index {index}: deepLink contains path traversal characters.")
@@ -94,7 +102,8 @@ def validate_report(report_data):
         # Security: Do not expose raw exception details
         print("Error: Invalid JSON format.")
         return False
-    except Exception:
-        # Security: Do not expose raw exception details
+    except Exception as e:
+        # Security: Do not expose raw exception details to the user, but log internally for visibility
+        logging.error("An unexpected error occurred during report validation.", exc_info=True)
         print("Error: An unexpected error occurred.")
         return False

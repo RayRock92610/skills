@@ -58,3 +58,13 @@
 **Vulnerability:** The regular expression used to validate `deepLink` GitHub URLs was executed against the raw, URL-encoded input strings, while downstream systems decode the URL before processing. This allowed an attacker to bypass SSRF or CRLF validation by URL-encoding restricted characters (e.g., `%40` for `@` or `%0a` for a newline).
 **Learning:** Security validations (like regular expressions enforcing allowed formats or blocking specific characters) must always occur on canonicalized or decoded forms of input data. If data is encoded, pattern matching on the raw string is insufficient because the encoding obfuscates the malicious payload.
 **Prevention:** Always iteratively decode and canonicalize inputs (e.g., using a while loop with `urllib.parse.unquote()` for URLs until the output doesn't change) *before* performing security validation checks, including regex matching.
+
+## 2024-05-26 - Double URL Encoding CPU Exhaustion (DoS)
+**Vulnerability:** The `urllib.parse.unquote` validation loop was structured as an unbounded `while True:` loop intended to fully decode heavily nested URL encodings. If an attacker supplied an excessively double-encoded URL (e.g. `"%25" * 100000 + "2e"`), the loop would run indefinitely until fully decoded, leading to CPU exhaustion.
+**Learning:** While iterating to fully canonicalize input is important to prevent bypassing rules, doing so without a depth limit opens up algorithmic complexity vulnerabilities.
+**Prevention:** Add a constant maximum iteration limit (e.g., 5 or 10) to decoding loops to prevent DoS via excessive double-encoding.
+
+## 2024-05-26 - Information Obfuscation and Missing Internal Logs
+**Vulnerability:** The `validate_report` function caught generic exceptions (`except Exception:`) and suppressed the traceback entirely, returning only "Error: An unexpected error occurred." to the user. While this successfully hides internal implementation details (good for security against external attackers), it also blinds internal logging and monitoring tools to the failure's root cause (e.g., `RecursionError` or integer length limit exceptions triggered by DoS payloads).
+**Learning:** Suppressing error details to users is necessary to prevent information leakage, but dropping the stack trace internally hinders security incident response and debugging.
+**Prevention:** Catch the exception securely and use `logging.error("...", exc_info=True)` to record the stack trace into internal server logs for visibility, while continuing to return generic error messages to the client.
