@@ -59,12 +59,35 @@
 **Learning:** Security validations (like regular expressions enforcing allowed formats or blocking specific characters) must always occur on canonicalized or decoded forms of input data. If data is encoded, pattern matching on the raw string is insufficient because the encoding obfuscates the malicious payload.
 **Prevention:** Always iteratively decode and canonicalize inputs (e.g., using a while loop with `urllib.parse.unquote()` for URLs until the output doesn't change) *before* performing security validation checks, including regex matching.
 
-## 2024-05-26 - Double URL Encoding CPU Exhaustion (DoS)
-**Vulnerability:** The `urllib.parse.unquote` validation loop was structured as an unbounded `while True:` loop intended to fully decode heavily nested URL encodings. If an attacker supplied an excessively double-encoded URL (e.g. `"%25" * 100000 + "2e"`), the loop would run indefinitely until fully decoded, leading to CPU exhaustion.
-**Learning:** While iterating to fully canonicalize input is important to prevent bypassing rules, doing so without a depth limit opens up algorithmic complexity vulnerabilities.
-**Prevention:** Add a constant maximum iteration limit (e.g., 5 or 10) to decoding loops to prevent DoS via excessive double-encoding.
+## 2024-09-25 - Command Injection Risks in Documentation Examples
+**Vulnerability:** Found hardcoded plaintext passwords in shell CLI commands (e.g., `--password=PASSWORD`, `psql "host=127.0.0.1 password=PASSWORD"`) within documentation.
+**Learning:** Examples in documentation are frequently copy-pasted into terminal sessions. Passing passwords via command line flags causes the password to be written in plaintext to the user's shell history (e.g., `.bash_history`) and temporarily exposes it to process-listing tools (e.g., `ps`).
+**Prevention:** In documentation for command-line interfaces, always recommend secure mechanisms for providing secrets, such as interactive prompts (e.g., `--prompt-for-password`), environment variables, or dedicated secret files. Avoid using CLI flags that accept secrets directly.
 
-## 2024-05-26 - Information Obfuscation and Missing Internal Logs
-**Vulnerability:** The `validate_report` function caught generic exceptions (`except Exception:`) and suppressed the traceback entirely, returning only "Error: An unexpected error occurred." to the user. While this successfully hides internal implementation details (good for security against external attackers), it also blinds internal logging and monitoring tools to the failure's root cause (e.g., `RecursionError` or integer length limit exceptions triggered by DoS payloads).
-**Learning:** Suppressing error details to users is necessary to prevent information leakage, but dropping the stack trace internally hinders security incident response and debugging.
-**Prevention:** Catch the exception securely and use `logging.error("...", exc_info=True)` to record the stack trace into internal server logs for visibility, while continuing to return generic error messages to the client.
+## 2026-09-26 - Command Line Vulnerabilities in Documentation Examples for AlloyDB
+**Vulnerability:** Found hardcoded plaintext passwords in shell CLI commands for AlloyDB clusters creation (e.g., `--password=PASSWORD`, `--password=YOUR_SECURE_PASSWORD`) within documentation.
+**Learning:** Examples in documentation are frequently copy-pasted into terminal sessions. Passing passwords via command line flags causes the password to be written in plaintext to the user's shell history (e.g., `.bash_history`) and temporarily exposes it to process-listing tools (e.g., `ps`).
+**Prevention:** In documentation for command-line interfaces like `gcloud alloydb`, always recommend secure mechanisms for providing secrets, such as interactive prompts (e.g., `--prompt-for-password`), environment variables, or dedicated secret files. Avoid using CLI flags that accept secrets directly.
+
+## 2026-10-27 - Airflow Traceback Leakage / Logging Raw Exceptions
+**Vulnerability:** Raw external API exceptions were being printed directly into logs (e.g., `logging.error("External API request failed: %s", e)` and re-raising without `from None`). This exposed sensitive information like API credentials, authorization info, and request details.
+**Learning:** In Python, implicitly chained exceptions or logging raw exception objects serialize the full traceback and local variables into logs, which can leak secrets.
+**Prevention:** Catch external exceptions explicitly, sanitize the log message (`logging.error("External API request failed - check external error tracker")`), and suppress implicit exception chaining by using `raise ... from None`. An automated AST rule now validates this.
+
+## 2024-10-02 - AST Security Scanner Bypass via Renaming Exception Variable
+**Vulnerability:** The AST security scanner `ast_security_scanner.py` responsible for preventing raw exception leakage (like `logging.error(e)`) was only checking for the variable name `"e"`. If an engineer used a different exception variable name (e.g., `except Exception as err: logging.error(err)`), the scanner failed to detect the leakage, exposing a bypass to a security control.
+**Learning:** Hardcoded literal comparisons for variable names in static analysis tools are ineffective because developers can use arbitrary naming conventions. AST rules must dynamically track aliases and bound names from scopes (like `except` handler variable names) to accurately trace data flow.
+**Prevention:** Update `ast_security_scanner.py` to keep a stack of dynamically captured variable names from `visit_ExceptHandler`'s `node.name` field, checking against those dynamically scoped names instead of just hardcoded strings.
+
+## 2026-10-03 - AST Exception Chaining & Traceback Leakage Enforcement
+**Vulnerability:** The AST security scanner previously flagged valid re-raising bare `raise` statements inside `except` blocks as security violations, while failing to enforce `from None` suppression when explicit exception chaining (`raise ... from e`) was used.
+**Learning:** In Python 3.8+, AST represents `from None` explicitly as `node.cause` being an `ast.Constant` node with a value of `None`. Bare `raise` statements evaluate to `node.exc is None` and re-raise the active exception without creating or leaking new exception context tracebacks.
+**Prevention:** In AST security visitors, ignore bare `raise` statements where `node.exc is None`, and explicitly check for `isinstance(node.cause, ast.Constant) and node.cause.value is None` to accurately enforce `from None` traceback suppression on raised exception instances.
+
+### Unbounded URL Decode Loop & Error Observability
+- **Vulnerability**: Unbounded `urllib.parse.unquote` decoding caused CPU exhaustion DoS; silent swallowing of exceptions (`RecursionError`, `ValueError`) blinded observability tooling.
+- **Root Cause**: While-loop unquoting without an iteration ceiling; broad exception suppression without structured error logging.
+- **Enforced Policy**:
+  - Bound nested URL unquoting to a strict limit (maximum 5 iterations).
+  - Log unexpected exceptions internally via `logging.error(..., exc_info=True)` for telemetry while preventing raw traceback exposure to external boundaries.
+- **Task ID**: 15816227076430139967

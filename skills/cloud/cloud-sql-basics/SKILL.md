@@ -49,7 +49,7 @@ access to Cloud SQL resources.
     is `postgres`:
     ```bash
     gcloud sql users set-password postgres \
-      --instance=INSTANCE_NAME --password=PASSWORD
+      --instance=INSTANCE_NAME --prompt-for-password
     ```
 
 4.  **Create a database:**
@@ -78,7 +78,7 @@ access to Cloud SQL resources.
 
     With the proxy running, connect using `psql` in another terminal:
     ```bash
-    psql "host=127.0.0.1 port=5432 user=postgres dbname=DATABASE_NAME password=PASSWORD sslmode=disable"
+    psql "host=127.0.0.1 port=5432 user=postgres dbname=DATABASE_NAME sslmode=disable"
     ```
 
 ## Reference Directory
