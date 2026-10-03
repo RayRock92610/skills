@@ -28,3 +28,8 @@
 **Vulnerability:** Hardcoded plaintext passwords (e.g., `password = "changeme"`) found in Terraform documentation examples for Cloud SQL and AlloyDB.
 **Learning:** Developers frequently copy and paste Infrastructure as Code examples directly into their modules. Providing hardcoded secrets in documentation encourages deploying databases with weak, known credentials, leading to immediate compromise upon deployment.
 **Prevention:** In IaC documentation and templates, always use secret managers or dynamic password generation resources (e.g., Terraform's `random_password`) to ensure secure-by-default behavior when examples are adopted.
+
+## 2024-05-24 - CLI Credential Leakage via Process Argument Sniffing
+**Vulnerability:** Documentation and examples suggested passing passwords using `--password="<plaintext>"` in command-line tools like `gcloud` and `psql`. This exposes the credentials globally in process listings (e.g., `ps aux` or `/proc/<PID>/cmdline`) to any unprivileged user on the host machine.
+**Learning:** Hardcoded passwords in documentation can lead users to adopt insecure provisioning habits in production. Providing passwords directly in command line arguments allows process monitoring tools to sniff them easily.
+**Prevention:** Replace static CLI password flags with interactive prompts (e.g., `--prompt-for-password`), environment variables (`PGPASSWORD`), or secure input files (`--password-file`).
