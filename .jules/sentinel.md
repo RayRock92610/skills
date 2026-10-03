@@ -83,3 +83,11 @@
 **Vulnerability:** The AST security scanner previously flagged valid re-raising bare `raise` statements inside `except` blocks as security violations, while failing to enforce `from None` suppression when explicit exception chaining (`raise ... from e`) was used.
 **Learning:** In Python 3.8+, AST represents `from None` explicitly as `node.cause` being an `ast.Constant` node with a value of `None`. Bare `raise` statements evaluate to `node.exc is None` and re-raise the active exception without creating or leaking new exception context tracebacks.
 **Prevention:** In AST security visitors, ignore bare `raise` statements where `node.exc is None`, and explicitly check for `isinstance(node.cause, ast.Constant) and node.cause.value is None` to accurately enforce `from None` traceback suppression on raised exception instances.
+
+### Process Argument Sniffing via Plaintext CLI Flags
+- **Vulnerability**: Plaintext passwords passed via `--password=...` flags in `gcloud` commands and inline passwords in `psql` connection strings in documentation guides.
+- **Root Cause**: Command-line arguments and process strings are exposed in process tables (`ps aux`, `/proc/<PID>/cmdline`) to unprivileged users during command execution.
+- **Enforced Policy**:
+  - Use `--prompt-for-password` for `gcloud sql users` provisioning and password-setting commands.
+  - Omit inline passwords from database connection URIs in documentation and scripts; enforce environment variable (`PGPASSWORD`), `.pgpass`, or interactive authentication.
+- **Task ID**: 6192103368285919445
