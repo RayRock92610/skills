@@ -91,3 +91,8 @@
   - Use `--prompt-for-password` for `gcloud sql users` provisioning and password-setting commands.
   - Omit inline passwords from database connection URIs in documentation and scripts; enforce environment variable (`PGPASSWORD`), `.pgpass`, or interactive authentication.
 - **Task ID**: 6192103368285919445
+
+## 2024-10-27 - URL Decoding DoS via Unbounded Loop
+**Vulnerability:** The validation logic in `validate_report.py` used an unbounded `while True:` loop to recursively decode URL-encoded `deepLink` values (using `urllib.parse.unquote`) until fully canonicalized. An attacker could provide excessively nested URL encodings (e.g., `%252525...`), forcing the server to loop an arbitrary number of times, causing a CPU exhaustion Denial of Service (DoS) algorithmic complexity attack.
+**Learning:** While iterating to decode nested encodings is necessary to prevent path traversal bypasses, performing it unboundedly introduces an algorithmic complexity risk (O(N^2)). Defensive loops parsing user input must always have an explicit bounding limit.
+**Prevention:** Always enforce a strict maximum iteration depth (e.g., 5) on any loops intended to fully canonicalize or recursively decode user-provided strings.
