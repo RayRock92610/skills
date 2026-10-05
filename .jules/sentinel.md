@@ -91,3 +91,8 @@
   - Use `--prompt-for-password` for `gcloud sql users` provisioning and password-setting commands.
   - Omit inline passwords from database connection URIs in documentation and scripts; enforce environment variable (`PGPASSWORD`), `.pgpass`, or interactive authentication.
 - **Task ID**: 6192103368285919445
+
+## 2026-10-05 - Fix URL Decoding DoS via unbounded unquote loops
+**Vulnerability:** Unbounded `while` loops intended for full canonicalization of URL-encoded strings using `urllib.parse.unquote`.
+**Learning:** URL decoding in a `while True:` loop can be exploited to cause a Denial of Service (DoS) by causing CPU exhaustion (O(N^2)) via excessively nested double-encodings (like `%252525...`).
+**Prevention:** Always enforce a strict maximum iteration depth (e.g., `for _ in range(5):`) for decoding loops to prevent algorithmic complexity attacks.
