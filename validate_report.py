@@ -71,7 +71,7 @@ def validate_report(report_data):
             # Security: Prevent path traversal in URLs (including multiple URL-encoded variations)
             # Security: Always decode first to prevent validation bypass via URL encoding
             decoded_url = item["deepLink"]
-            while True:
+            for _ in range(5):
                 unquoted = urllib.parse.unquote(decoded_url)
                 if unquoted == decoded_url:
                     break
