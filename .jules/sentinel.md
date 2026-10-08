@@ -96,3 +96,8 @@
 **Vulnerability:** Unbounded `while` loops intended for full canonicalization of URL-encoded strings using `urllib.parse.unquote`.
 **Learning:** URL decoding in a `while True:` loop can be exploited to cause a Denial of Service (DoS) by causing CPU exhaustion (O(N^2)) via excessively nested double-encodings (like `%252525...`).
 **Prevention:** Always enforce a strict maximum iteration depth (e.g., `for _ in range(5):`) for decoding loops to prevent algorithmic complexity attacks.
+
+## 2026-10-08 - ReDoS and Parser Differentials in URL Validation Regex
+**Vulnerability:** The regular expression used to validate `deepLink` GitHub URLs was overly complex, making it prone to Regular Expression Denial of Service (ReDoS) and potential URL parser differentials where the regex evaluates differently than the actual HTTP client (e.g., ignoring userinfo blocks like `username:password@`).
+**Learning:** Complex regular expressions are not robust for comprehensive URL validation. They can lead to severe performance degradation with crafted inputs and often fail to correctly parse edge cases, creating vulnerabilities like SSRF if the system misinterprets the actual destination of the URL.
+**Prevention:** Avoid complex regex for URL validation. Transition to strict `urllib.parse.urlsplit` (or equivalent URL parsing libraries), checking for allowed schemes, preventing userinfo injection (username/password), and enforcing explicit hostname boundaries and path structures.

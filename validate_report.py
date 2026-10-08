@@ -81,10 +81,32 @@ def validate_report(report_data):
                 print(f"Error at index {index}: deepLink contains path traversal characters.")
                 return False
 
-            # Security: Use \Z for end of string and avoid loose catch-alls to prevent SSRF via authority manipulation or CRLF
-            # Security: Prevent ReDoS by ensuring path components don't overlap with repository names
-            if not re.match(r'^https://github\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+(?:[/?#][^\s@<>"\'\\]*)?\Z', decoded_url):
-                print(f"Error at index {index}: deepLink must be a valid GitHub URL.")
+            # Security: Use urlsplit for URL parsing to prevent ReDoS and parser differentials
+            try:
+                parsed_url = urllib.parse.urlsplit(decoded_url)
+            except ValueError:
+                print(f"Error at index {index}: deepLink must be a valid URL.")
+                return False
+
+            if parsed_url.scheme != "https":
+                print(f"Error at index {index}: deepLink must use HTTPS.")
+                return False
+
+            if parsed_url.hostname != "github.com":
+                print(f"Error at index {index}: deepLink must point to github.com.")
+                return False
+
+            if parsed_url.username or parsed_url.password:
+                print(f"Error at index {index}: deepLink must not contain credentials.")
+                return False
+
+            path_parts = [p for p in parsed_url.path.strip("/").split("/") if p]
+            if len(path_parts) < 2:
+                print(f"Error at index {index}: deepLink must include owner and repository.")
+                return False
+
+            if not (re.match(r'^[a-zA-Z0-9_.-]+\Z', path_parts[0]) and re.match(r'^[a-zA-Z0-9_.-]+\Z', path_parts[1])):
+                print(f"Error at index {index}: deepLink owner and repository contain invalid characters.")
                 return False
 
         print("Validation successful!")
