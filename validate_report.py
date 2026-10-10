@@ -17,6 +17,21 @@ def validate_report(report_data):
 
     try:
         data = json.loads(report_data)
+
+        # Security: Enforce recursion depth limits to prevent JSON deserialization bombs
+        def check_depth(obj, current_depth=0, max_depth=10):
+            if current_depth > max_depth:
+                return False
+            if isinstance(obj, dict):
+                return all(check_depth(v, current_depth + 1, max_depth) for v in obj.values())
+            elif isinstance(obj, list):
+                return all(check_depth(v, current_depth + 1, max_depth) for v in obj)
+            return True
+
+        if not check_depth(data):
+            print("Error: JSON payload exceeds maximum allowed depth.")
+            return False
+
         if not isinstance(data, list):
             print("Error: Report must be a list of items.")
             return False
